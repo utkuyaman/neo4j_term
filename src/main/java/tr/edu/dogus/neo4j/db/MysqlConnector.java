@@ -45,7 +45,7 @@ public class MysqlConnector {
 
 		try {
 			Statement st = conn.createStatement();
-			ResultSet res = st.executeQuery("SELECT * FROM  twitteruser limit 10");
+			ResultSet res = st.executeQuery("SELECT * FROM  twitteruser limit 100");
 
 			while (res.next()) {
 				Integer userId = res.getInt("user_id");

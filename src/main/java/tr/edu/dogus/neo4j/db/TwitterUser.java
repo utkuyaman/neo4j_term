@@ -40,4 +40,9 @@ public class TwitterUser {
 		this.name = name;
 	}
 
+	@Override
+	public String toString() {
+		return "TwitterUser [userId=" + userId + ", twitterUserId=" + twitterUserId + ", name=" + name + "]";
+	}
+
 }

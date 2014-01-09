@@ -2,12 +2,16 @@ package tr.edu.dogus.neo4j;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Iterator;
 
+import org.neo4j.cypher.javacompat.ExecutionEngine;
+import org.neo4j.cypher.javacompat.ExecutionResult;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
+import org.neo4j.helpers.collection.IteratorUtil;
 import org.neo4j.kernel.impl.util.FileUtils;
 import org.neo4j.tooling.GlobalGraphOperations;
 
@@ -20,45 +24,59 @@ public class EmbeddedNeo4j {
 
 	public String greeting;
 
-	// START SNIPPET: vars
 	GraphDatabaseService graphDb;
 
-	// END SNIPPET: vars
-
-	// START SNIPPET: createReltype
 	private static enum RelTypes implements RelationshipType {
-
 		Friend, Follower
 	}
-
-	// END SNIPPET: createReltype
 
 	public static void main(final String[] args) {
 		EmbeddedNeo4j neo = new EmbeddedNeo4j();
 		neo.createDb();
 
+		neo.operations();
+
 		neo.removeData();
 		neo.shutDown();
+	}
+
+	private void operations() {
+		ExecutionEngine engine = new ExecutionEngine(graphDb);
+
+		ExecutionResult result;
+		try (Transaction ignored = graphDb.beginTx()) {
+			// adi `ya` ile baslayan tum nodelari bul
+			result = engine.execute("start n=node(*) where n.name =~ 'ya.*' return n, n.name");
+
+			// geri donen datalardan bize `n` lazim sadece, node datasi aslinda o
+
+			Iterator<Node> n_column = result.columnAs("n");
+			for (Node node : IteratorUtil.asIterable(n_column)) {
+				// note: we're grabbing the name property from the node, not from the n.name in this case.
+				String nodeResult = node + ": " + node.getProperty("name");
+				System.out.println(nodeResult);
+			}
+		}
 	}
 
 	void createDb() {
 		MysqlConnector myConnector = new MysqlConnector();
 
 		clearDb();
-		// START SNIPPET: startDb
+
 		graphDb = new GraphDatabaseFactory().newEmbeddedDatabase(DB_PATH);
 
-		// END SNIPPET: startDb
-
-		// START SNIPPET: transaction
 		Transaction tx;
 		try {
 			tx = graphDb.beginTx();
 
-			// Database operations go here
-			// END SNIPPET: transaction
-			// START SNIPPET: addData
 			for (TwitterUser twitterUser : myConnector.getAllTwitterUser()) {
+				// check if any data is null or not
+				if (twitterUser.getName() == null || twitterUser.getUserId() == null
+						|| twitterUser.getTwitterUserId() == null) {
+					continue;
+				}
+
 				Node node = graphDb.createNode();
 				node.setProperty("name", twitterUser.getName());
 				node.setProperty("user_id", twitterUser.getUserId());
@@ -66,19 +84,10 @@ public class EmbeddedNeo4j {
 			}
 
 			// Relationship relationship = firstNode.createRelationshipTo(secondNode, RelTypes.KNOWS);
-			// END SNIPPET: addData
-			// START SNIPPET: transaction
 			tx.success();
-
-			for (Node node : GlobalGraphOperations.at(graphDb).getAllNodes()) {
-				if (node.hasProperty("name")) {
-					System.out.println(node.getProperty("name"));
-				}
-			}
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		// END SNIPPET: transaction
 	}
 
 	private void clearDb() {
@@ -93,12 +102,10 @@ public class EmbeddedNeo4j {
 		Transaction tx;
 		try {
 			tx = graphDb.beginTx();
-			// START SNIPPET: removingData
 			// let's remove the data
-			for (Node node : graphDb.getAllNodes()) {
+			for (Node node : GlobalGraphOperations.at(graphDb).getAllNodes()) {
 				node.delete();
 			}
-			// END SNIPPET: removingData
 
 			tx.success();
 		} catch (Exception e) {
@@ -109,9 +116,7 @@ public class EmbeddedNeo4j {
 	void shutDown() {
 		System.out.println();
 		System.out.println("Shutting down database ...");
-		// START SNIPPET: shutdownServer
 		graphDb.shutdown();
-		// END SNIPPET: shutdownServer
 	}
 
 	// END SNIPPET: shutdownHook
