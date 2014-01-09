@@ -3,6 +3,7 @@ package tr.edu.dogus.neo4j;
 import java.io.File;
 import java.io.IOException;
 import java.util.Iterator;
+import java.util.Properties;
 
 import org.neo4j.cypher.javacompat.ExecutionEngine;
 import org.neo4j.cypher.javacompat.ExecutionResult;
@@ -22,25 +23,34 @@ public class EmbeddedNeo4j {
 
 	private static final String DB_PATH = "target/neo4j-hello-db";
 
-	public String greeting;
+	private static Properties props = new Properties();
 
 	GraphDatabaseService graphDb;
+
+	MysqlConnector myConnector;
 
 	private static enum RelTypes implements RelationshipType {
 		Friend, Follower
 	}
 
-	public static void main(final String[] args) {
-		EmbeddedNeo4j neo = new EmbeddedNeo4j();
-		neo.createDb();
-
-		neo.operations();
-
-		neo.removeData();
-		neo.shutDown();
+	public EmbeddedNeo4j() {
 	}
 
-	private void operations() {
+	public Boolean init() {
+		try {
+			props.load(this.getClass().getResourceAsStream("/config.properties"));
+		} catch (Exception e) {
+			e.printStackTrace();
+			return false;
+		}
+
+		myConnector = new MysqlConnector(props.getProperty("db.host"), props.getProperty("db.name"),
+				props.getProperty("db.user"), props.getProperty("db.pass"));
+
+		return true;
+	}
+
+	public void operations() {
 		ExecutionEngine engine = new ExecutionEngine(graphDb);
 
 		ExecutionResult result;
@@ -60,8 +70,6 @@ public class EmbeddedNeo4j {
 	}
 
 	void createDb() {
-		MysqlConnector myConnector = new MysqlConnector();
-
 		clearDb();
 
 		graphDb = new GraphDatabaseFactory().newEmbeddedDatabase(DB_PATH);

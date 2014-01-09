@@ -16,8 +16,17 @@ import java.util.logging.Logger;
  */
 public class MysqlConnector {
 
-	public MysqlConnector() {
+	private final String dbHost;
+	private final String dbName;
+	private final String dbUserName;
+	private final String dbPass;
 
+	public MysqlConnector(String dbHost, String dbName, String dbUserName, String dbPass) {
+		super();
+		this.dbHost = dbHost;
+		this.dbName = dbName;
+		this.dbUserName = dbUserName;
+		this.dbPass = dbPass;
 	}
 
 	public List<TwitterUser> getAllTwitterUser() {
@@ -38,7 +47,8 @@ public class MysqlConnector {
 
 		Connection conn = null;
 		try {
-			conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/tweet", "root", "");
+			conn = DriverManager.getConnection(String.format("jdbc:mysql://%s:3306/%s", dbHost, dbName), dbUserName,
+					dbPass);
 		} catch (SQLException ex) {
 			Logger.getLogger(MysqlConnector.class.getName()).log(Level.SEVERE, null, ex);
 		}
